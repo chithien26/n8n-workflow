@@ -1,5 +1,5 @@
 {
-  "name": "Tóm tắt mail mới qua Telegram",
+  "name": "mail-to-telegram",
   "nodes": [
     {
       "parameters": {
@@ -34,50 +34,8 @@
     },
     {
       "parameters": {
-        "modelId": {
-          "__rl": true,
-          "mode": "list",
-          "value": "gpt-5-mini",
-          "cachedResultName": "GPT-5-MINI"
-        },
-        "responses": {
-          "values": [
-            {
-              "content": "=Tên người gửi: {{ $json.from?.value?.[0]?.name || \"\" }}\nEmail người gửi: {{ $json.from?.value?.[0]?.address || \"\" }}\nTiêu đề: {{ $json.subject || \"(không có tiêu đề)\" }}\nThời gian: {{ $json.date ? DateTime.fromISO($json.date).setZone(\"Asia/Ho_Chi_Minh\").toFormat(\"HH:mm dd/MM/yyyy\") : \"\" }}\n\nNội dung:\n{{ String($json.text || $json.textAsHtml || \"\").slice(0, 6000) }}"
-            }
-          ]
-        },
-        "builtInTools": {},
-        "options": {
-          "instructions": "Bạn là trợ lý đọc email giúp người dùng nắm nhanh thông tin. Phân tích tiêu đề và nội dung email, rồi viết tin nhắn Telegram ngắn gọn bằng tiếng Việt theo đúng mẫu sau:\n<b>[Tiêu đề email]</b>\nTừ: [tên người gửi] ([email người gửi])\nLoại: [Công việc / Cá nhân / Hóa đơn - Thanh toán / Quảng cáo / Thông báo hệ thống / Khác]\nMức độ: [Khẩn cấp / Quan trọng / Bình thường / Có thể bỏ qua]\n\n<b>Tóm tắt:</b> 2-3 câu nêu ý chính.\n<b>Cần làm:</b> việc người nhận cần làm và hạn chót nếu có, hoặc \"Không có\".\n\nChỉ dùng thẻ HTML <b>, không dùng Markdown, không dùng ký tự < hoặc > ở chỗ khác. Dòng Từ không có dấu chấm cuối; nếu không có tên người gửi thì chỉ ghi email. Mọi thẻ <b> phải đóng đúng bằng </b>. Không bịa thông tin không có trong email. Tổng độ dài dưới 1500 ký tự.",
-          "maxTokens": 3000,
-          "reasoning": {
-            "reasoningOptions": {
-              "effort": "low",
-              "summary": "none"
-            }
-          }
-        }
-      },
-      "id": "266fcabb-cf97-447f-97b6-5b4406933148",
-      "name": "AI phân tích & tóm tắt mail",
-      "type": "@n8n/n8n-nodes-langchain.openAi",
-      "typeVersion": 2.3,
-      "position": [
-        176,
-        -192
-      ],
-      "credentials": {
-        "openAiApi": {
-          "id": "9aVRNsltrhBkYioX",
-          "name": "OpenAI account"
-        }
-      }
-    },
-    {
-      "parameters": {
         "chatId": "5380993960",
-        "text": "={{ $json.subject.toUpperCase() }}\n\nFrom: {{ $json.from.value[0].name }} ({{ $json.from.value[0].address }})\nTime: {{ $json.headers.date.toDateTime().format('dd-MM-yyyy || hh:mm:ss') }}\n-----------------------------------------------------------\n\n{{ $json.text }}\n",
+        "text": "={{ $json.subject.toUpperCase() }}\n\nFrom: {{ $json.from.value[0].name || \"Không xác định!\" }} ({{ $json.from.value[0].address || \"Không xác định!\"}} )\nTime: {{ $json.headers.date.toDateTime().setZone('Asia/Ho_Chi_Minh').format('dd-MM-yyyy || HH:mm:ss') }}\n------------------------------------------------\n\n{{ $json.text }}\n",
         "additionalFields": {
           "appendAttribution": false,
           "disable_web_page_preview": true,
@@ -89,14 +47,164 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        624,
-        0
+        640,
+        32
       ],
       "webhookId": "cfd3ff98-78bc-4edb-a3fc-7380078f65d5",
       "credentials": {
         "telegramApi": {
           "id": "FOTL2Crd4vulqWjn",
           "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://172.17.0.1:11434/api/generate",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"phi3:mini\",\n  \"prompt\": \"Hãy tóm tắt ngắn gọn nội dung sau bằng tiếng Việt: {{ ($json.text || '').replace(/[\\r\\n]+/g, ' ') }}\",\n  \"stream\": false\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        320,
+        160
+      ],
+      "id": "dc5b3c9c-9657-41f3-bfb6-90d5f1da27a1",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "d2779f0b-4596-462d-9b67-342ddeaeb3bb",
+              "leftValue": "={{ $json.from.value[0].address }}",
+              "rightValue": "lechithien26",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "9c3aca57-1afe-4ecc-bace-64630b20c85a",
+              "leftValue": "={{ $json.from.value[0].address }}",
+              "rightValue": "noreply",
+              "operator": {
+                "type": "string",
+                "operation": "notContains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        144,
+        -176
+      ],
+      "id": "52b3be00-0d44-496f-9e3d-88828b8c3569",
+      "name": "lọc email nào cần trả lời"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "7e873876-3ccf-417b-9fb6-6c084772fd66",
+              "leftValue": "={{ $json.subject.toLowerCase()}}",
+              "rightValue": "xin",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "98867054-6de0-4b70-bff9-2fc624116a59",
+              "leftValue": "={{ $json.subject.toLowerCase()}}",
+              "rightValue": "nghỉ",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        320,
+        -272
+      ],
+      "id": "40865837-b4de-4c29-ae69-5bc463a515c7",
+      "name": "lọc nội dung để trả lời"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.from.value[0].address }}",
+        "subject": "OK luôn",
+        "emailType": "text",
+        "message": "ok thỏi mái đi",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        544,
+        -336
+      ],
+      "id": "3ac2ff8a-a887-470e-8b6d-f02b22e34517",
+      "name": "gửi email cho phép",
+      "webhookId": "3cae9892-c489-4331-b18f-c5ab5197026b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "KeRMOdXiiPHD9ekB",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.from.value[0].address }}",
+        "subject": "Không cho",
+        "emailType": "text",
+        "message": "k cho nhe",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        560,
+        -160
+      ],
+      "id": "6bf032b4-b2f1-41ed-bf25-be88eaf0feb7",
+      "name": "gửi email k cho phép",
+      "webhookId": "3cae9892-c489-4331-b18f-c5ab5197026b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "KeRMOdXiiPHD9ekB",
+          "name": "Gmail account"
         }
       }
     }
@@ -110,11 +218,44 @@
             "node": "Gửi Telegram",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "lọc email nào cần trả lời",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
     },
-    "AI phân tích & tóm tắt mail": {
+    "HTTP Request": {
+      "main": [
+        []
+      ]
+    },
+    "lọc email nào cần trả lời": {
+      "main": [
+        [
+          {
+            "node": "lọc nội dung để trả lời",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "lọc nội dung để trả lời": {
+      "main": [
+        [
+          {
+            "node": "gửi email cho phép",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "gửi email cho phép": {
       "main": [
         []
       ]
@@ -128,7 +269,7 @@
     "timeSavedMode": "fixed",
     "callerPolicy": "workflowsFromSameOwner"
   },
-  "versionId": "76a45a6d-8e89-45c8-a4fd-7abf02c9f20f",
+  "versionId": "d72d3e4a-d4c2-4057-9b93-352d0772b770",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "1f2166224f83d3e8b56633ee0526492b321ac746692a308e264431d17550f331"
