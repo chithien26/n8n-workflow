@@ -1,0 +1,264 @@
+{
+  "name": "Bản tin hot mỗi sáng qua Telegram",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "id": "f9a10442-d2d6-486b-8a16-62e31edc7268",
+      "name": "Mỗi sáng 7h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "feeds",
+              "name": "feeds",
+              "type": "array",
+              "value": "={{ [\"https://vnexpress.net/rss/tin-noi-bat.rss\", \"https://vnexpress.net/rss/suc-khoe.rss\", \"https://vnexpress.net/rss/the-gioi.rss\", \"https://vnexpress.net/rss/so-hoa.rss\", \"https://tuoitre.vn/rss/tin-moi-nhat.rss\", \"https://thanhnien.vn/rss/gioi-tre.rss\"] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "134e0e8f-a163-42b2-8441-370d978ab411",
+      "name": "Danh sách nguồn tin",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        224,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "feeds",
+        "options": {
+          "destinationFieldName": "url"
+        }
+      },
+      "id": "d48f70dd-988d-418d-ac67-65fb674ce7bb",
+      "name": "Tách từng nguồn",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1.1,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {}
+      },
+      "id": "ba42c519-0493-45c3-b7bc-82c10ff1d4bd",
+      "name": "Đọc RSS",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        672,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "recent",
+              "leftValue": "={{ $json.isoDate }}",
+              "rightValue": "={{ $now.minus({ hours: 24 }).toISO() }}",
+              "operator": {
+                "type": "dateTime",
+                "operation": "after"
+              }
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "064de4c5-b5d9-4b53-b094-714ca8ddbfc0",
+      "name": "Tin trong 24 giờ qua",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.4,
+      "position": [
+        896,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini",
+          "cachedResultName": "GPT-5-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Hôm nay là {{ $now.setZone(\"Asia/Ho_Chi_Minh\").toFormat(\"dd/MM/yyyy\") }}. Dưới đây là các tin tức trong 24 giờ qua (tiêu đề | mô tả | link):\n\n{{ $input.all().filter(i => i.json.title).slice(0, 120).map(i => \"- \" + i.json.title + \" | \" + String(i.json.contentSnippet || \"\").slice(0, 200) + \" | \" + i.json.link).join(\"\\n\") }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "instructions": "Bạn là biên tập viên bản tin buổi sáng bằng tiếng Việt. Từ danh sách tin, chọn 8-10 tin HOT và có tác động lớn nhất, ưu tiên: chuyện giới trẻ, dịch bệnh/bệnh nguy hiểm, cập nhật công nghệ lớn, sự cố/lỗi phần mềm hoặc vụ việc gây ảnh hưởng rộng (trong nước và quốc tế). Bỏ tin vụn vặt, trùng lặp. Với mỗi tin: 1 dòng tiêu đề in đậm bằng thẻ <b>...</b>, 1-2 câu tóm tắt vì sao đáng chú ý, rồi <a href=\"LINK\">Đọc thêm</a>. Mở đầu bằng \"<b>Bản tin sáng [ngày]</b>\". Chỉ dùng thẻ HTML <b> và <a>, không dùng Markdown, không dùng ký tự < hoặc > ở chỗ khác. Tổng độ dài dưới 3500 ký tự.",
+          "maxTokens": 6000,
+          "reasoning": {
+            "reasoningOptions": {
+              "effort": "low",
+              "summary": "none"
+            }
+          }
+        }
+      },
+      "id": "2aa35af9-35be-414c-b6e7-f9a2e1763dba",
+      "name": "AI chọn và tóm tắt tin hot",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        1120,
+        0
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "openAiApi": {
+          "id": null,
+          "name": "Gateway credits",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "5380993960",
+        "text": "={{ $json.output[0].content[0].text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": true,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "e70ed94e-f3b6-4ebd-aba1-80e0a6dfa8dd",
+      "name": "Gửi Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1472,
+        0
+      ],
+      "webhookId": "e3f870da-5d9c-44fd-b238-cdf1d526c38e",
+      "executeOnce": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "y35qwEJUiqVZhnEP",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Mỗi sáng 7h": {
+      "main": [
+        [
+          {
+            "node": "Danh sách nguồn tin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Danh sách nguồn tin": {
+      "main": [
+        [
+          {
+            "node": "Tách từng nguồn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tách từng nguồn": {
+      "main": [
+        [
+          {
+            "node": "Đọc RSS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Đọc RSS": {
+      "main": [
+        [
+          {
+            "node": "Tin trong 24 giờ qua",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tin trong 24 giờ qua": {
+      "main": [
+        [
+          {
+            "node": "AI chọn và tóm tắt tin hot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI chọn và tóm tắt tin hot": {
+      "main": [
+        [
+          {
+            "node": "Gửi Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "f4f9c621-0d81-4e10-b409-ab9b6fa948c2",
+  "meta": {
+    "instanceId": "bcb42c7e21ac6c6c31885f62560e9f9836524322905c4e200e4d81bf0bcc5211"
+  },
+  "nodeGroups": [],
+  "id": "AZIneNSjERYlggyE",
+  "tags": []
+}

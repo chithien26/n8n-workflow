@@ -1,0 +1,139 @@
+{
+  "name": "Tóm tắt mail mới qua Telegram",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "q": "in:inbox",
+          "readStatus": "both"
+        },
+        "options": {}
+      },
+      "id": "6ccb0caf-d97b-4db9-bee7-13dc7fc9b045",
+      "name": "Khi có mail mới",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "KeRMOdXiiPHD9ekB",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini",
+          "cachedResultName": "GPT-5-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Tên người gửi: {{ $json.from?.value?.[0]?.name || \"\" }}\nEmail người gửi: {{ $json.from?.value?.[0]?.address || \"\" }}\nTiêu đề: {{ $json.subject || \"(không có tiêu đề)\" }}\nThời gian: {{ $json.date ? DateTime.fromISO($json.date).setZone(\"Asia/Ho_Chi_Minh\").toFormat(\"HH:mm dd/MM/yyyy\") : \"\" }}\n\nNội dung:\n{{ String($json.text || $json.textAsHtml || \"\").slice(0, 6000) }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "instructions": "Bạn là trợ lý đọc email giúp người dùng nắm nhanh thông tin. Phân tích tiêu đề và nội dung email, rồi viết tin nhắn Telegram ngắn gọn bằng tiếng Việt theo đúng mẫu sau:\n<b>[Tiêu đề email]</b>\nTừ: [tên người gửi] ([email người gửi])\nLoại: [Công việc / Cá nhân / Hóa đơn - Thanh toán / Quảng cáo / Thông báo hệ thống / Khác]\nMức độ: [Khẩn cấp / Quan trọng / Bình thường / Có thể bỏ qua]\n\n<b>Tóm tắt:</b> 2-3 câu nêu ý chính.\n<b>Cần làm:</b> việc người nhận cần làm và hạn chót nếu có, hoặc \"Không có\".\n\nChỉ dùng thẻ HTML <b>, không dùng Markdown, không dùng ký tự < hoặc > ở chỗ khác. Dòng Từ không có dấu chấm cuối; nếu không có tên người gửi thì chỉ ghi email. Mọi thẻ <b> phải đóng đúng bằng </b>. Không bịa thông tin không có trong email. Tổng độ dài dưới 1500 ký tự.",
+          "maxTokens": 3000,
+          "reasoning": {
+            "reasoningOptions": {
+              "effort": "low",
+              "summary": "none"
+            }
+          }
+        }
+      },
+      "id": "266fcabb-cf97-447f-97b6-5b4406933148",
+      "name": "AI phân tích & tóm tắt mail",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        176,
+        -192
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "9aVRNsltrhBkYioX",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "5380993960",
+        "text": "={{ $json.subject.toUpperCase() }}\n\nFrom: {{ $json.from.value[0].name }} ({{ $json.from.value[0].address }})\nTime: {{ $json.headers.date.toDateTime().format('dd-MM-yyyy || hh:mm:ss') }}\n-----------------------------------------------------------\n\n{{ $json.text }}\n",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": true,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "99c18563-4a68-4108-b926-c1a0068e0113",
+      "name": "Gửi Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        624,
+        0
+      ],
+      "webhookId": "cfd3ff98-78bc-4edb-a3fc-7380078f65d5",
+      "credentials": {
+        "telegramApi": {
+          "id": "FOTL2Crd4vulqWjn",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Khi có mail mới": {
+      "main": [
+        [
+          {
+            "node": "Gửi Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI phân tích & tóm tắt mail": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "76a45a6d-8e89-45c8-a4fd-7abf02c9f20f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1f2166224f83d3e8b56633ee0526492b321ac746692a308e264431d17550f331"
+  },
+  "nodeGroups": [],
+  "id": "tlokVdzBhVJFoKu5",
+  "tags": []
+}
